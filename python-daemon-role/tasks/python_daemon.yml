@@ -1,0 +1,81 @@
+---
+- name: Check that variable "respond_to_test_uri" is defined
+  ansible.builtin.assert:
+    that:
+      - respond_to_test_uri != ""
+    fail_msg: The variable "respond_to_test_uri" should be defined
+
+- name: "Create group {{ daemon_group }} for the daemon"
+  group:
+    name: "{{ daemon_group }}"
+    state: present
+
+- name: "Create user {{ daemon_user }} for running the daemon"
+  ansible.builtin.user:
+    name: "{{ daemon_user }}"
+    group: "{{ daemon_group }}"
+    shell: /sbin/nologin
+    create_home: false
+    comment: "User for python http daemon"
+    state: present
+
+- name: Create /opt/python-daemon directory
+  ansible.builtin.file:
+    path: /opt/python-daemon
+    owner: "{{ daemon_user }}"
+    group: "{{ daemon_group }}"
+    state: directory
+    mode: '0755'
+
+- name: Create python daemon file
+  ansible.builtin.template:
+    src: templates/python-daemon-http.py.j2
+    dest: /opt/python-daemon/python-daemon-http.py
+    owner: "{{ daemon_user }}"
+    group: "{{ daemon_group }}"
+    mode: '0644'
+
+- name: Create systemd unit file
+  ansible.builtin.template:
+    src: templates/python-daemon-http.service.j2
+    dest: /etc/systemd/system/python-daemon-http.service
+    mode: '0644'
+  notify:
+    - Reload systemd  
+
+- name: Run handlers
+  ansible.builtin.meta: flush_handlers
+
+- name: Install "iptables-persistent" package
+  package:
+    name: iptables-persistent
+    state: present
+
+- name: Enable "netfilter-persistent" service
+  systemd:
+    name: netfilter-persistent
+    enabled: yes
+    state: started
+
+- name: Forward port 80 to 8080
+  ansible.builtin.iptables:
+    table: nat
+    chain: PREROUTING
+    protocol: tcp
+    match: tcp
+    destination_port: 80
+    jump: REDIRECT
+    to_ports: 8080
+    comment: Redirect web traffic to port 8080
+
+- name: Save current state of the iptables in system file
+  community.general.iptables_state:
+    ip_version: ipv4
+    state: saved
+    path: /etc/iptables/rules.v4
+
+- name: Enable python-daemon-http service
+  systemd:
+    name: python-daemon-http
+    enabled: yes
+    state: started

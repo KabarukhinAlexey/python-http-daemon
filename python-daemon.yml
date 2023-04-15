@@ -1,0 +1,8 @@
+---
+- name: Deploy Python HTTP Daemon
+  hosts: python-daemon
+  become: true
+  roles:
+    - role: python-daemon-role
+      vars:
+        respond_to_test_uri: "329d4feb-c5c0-4de5-b10c-701b44fbec4f"

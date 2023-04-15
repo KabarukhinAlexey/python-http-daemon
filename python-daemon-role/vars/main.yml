@@ -1,0 +1,3 @@
+---
+daemon_user: python-daemon
+daemon_group: python-daemon

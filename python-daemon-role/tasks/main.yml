@@ -1,0 +1,16 @@
+---
+- name: Include tasks for installing Python3
+  ansible.builtin.include_tasks:
+    file: install_python.yml
+    apply:
+      tags: install_pytho
+  tags: 
+    - install_python
+
+- name: Include tasks for creating Python Daemon
+  ansible.builtin.include_tasks:
+    file: python_daemon.yml
+    apply:
+      tags: python_daemon
+  tags:
+    - python_daemon
